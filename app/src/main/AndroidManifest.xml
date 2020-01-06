@@ -1,7 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.technohub.testapp">
-<uses-permission android:name="android.permission.INTERNET"></uses-permission>
+    <meta-data android:name="sendotp.key" android:value="@string/sendotp_key" />
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.RECEIVE_SMS" />
+    <uses-permission android:name="android.permission.READ_SMS" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
+
     <application
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
@@ -9,6 +16,8 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
+        <activity android:name=".OTPLibraryEx"></activity>
+
         <receiver
             android:name=".SmsBroadcastReceiver"
             android:exported="true">
@@ -16,12 +25,9 @@
                 <action android:name="com.google.android.gms.auth.api.phone.SMS_RETRIEVE" />
             </intent-filter>
         </receiver>
-        <activity android:name=".OtpSMS">
 
-        </activity>
-        <activity android:name=".BarChartCode">
-
-        </activity>
+        <activity android:name=".OtpSMS"></activity>
+        <activity android:name=".BarChartCode"></activity>
         <activity android:name=".samople" />
         <activity android:name=".MainActivity">
             <intent-filter>
@@ -30,6 +36,17 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <uses-library android:name="org.apache.http.legacy" android:required="false"/>
+
+        <activity
+            android:name=".VerificationActivity"
+            android:screenOrientation="portrait"
+            android:windowSoftInputMode="stateHidden|adjustResize" />
+
+        <meta-data
+            android:name="sendotp.key"
+            android:value="@string/sendotp_key" />
+
     </application>
 
 </manifest>

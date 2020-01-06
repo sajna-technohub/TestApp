@@ -10,6 +10,8 @@ android {
         versionCode 1
         versionName "1.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        useLibrary  'org.apache.http.legacy'
+
     }
     buildTypes {
         release {
@@ -34,5 +36,7 @@ dependencies {
     implementation 'com.google.android.gms:play-services-auth:17.0.0'
     implementation 'com.google.android.gms:play-services-auth-api-phone:17.0.0'
     implementation 'androidx.recyclerview:recyclerview:1.1.0'
+    implementation 'com.msg91.sendotpandroid.library:library:1.1'//required
+    implementation 'com.googlecode.libphonenumber:libphonenumber:7.0.4'//required
 
 }

@@ -1,95 +1,141 @@
 package com.technohub.testapp;
 
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.recyclerview.widget.DefaultItemAnimator;
-import androidx.recyclerview.widget.LinearLayoutManager;
-import androidx.recyclerview.widget.RecyclerView;
-
+import android.Manifest;
+import android.content.Context;
+import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.graphics.Color;
 import android.os.Bundle;
-import android.view.animation.Animation;
-import android.view.animation.AnimationUtils;
-import android.view.animation.LinearInterpolator;
-import android.view.animation.RotateAnimation;
-import android.widget.ImageView;
-import android.widget.RelativeLayout;
+import android.telephony.TelephonyManager;
+import android.text.Editable;
+import android.text.TextWatcher;
+import android.view.View;
+import android.widget.Button;
+import android.widget.EditText;
+import android.widget.TextView;
+import android.widget.Toast;
 
-import java.util.ArrayList;
-import java.util.List;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
+
+import com.msg91.sendotpandroid.library.PhoneNumberFormattingTextWatcher;
+import com.msg91.sendotpandroid.library.PhoneNumberUtils;
+import com.msg91.sendotpandroid.library.internal.Iso2Phone;
+
+import java.util.Locale;
 
 public class MainActivity extends AppCompatActivity {
-    private List<Movie> movieList = new ArrayList<>();
-    private RecyclerView recyclerView;
-    private MoviesAdapter mAdapter;
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_samople);
-        recyclerView = (RecyclerView) findViewById(R.id.recycler_view);
 
-        mAdapter = new MoviesAdapter(movieList);
-        RecyclerView.LayoutManager mLayoutManager = new LinearLayoutManager(getApplicationContext());
-        recyclerView.setLayoutManager(mLayoutManager);
-        recyclerView.setItemAnimator(new DefaultItemAnimator());
-        recyclerView.setAdapter(mAdapter);
+  public static final String INTENT_PHONENUMBER = "phonenumber";
+  public static final String INTENT_COUNTRY_CODE = "code";
 
-        prepareMovieData();
-//// Start animating the image
-//        final RelativeLayout splash = (RelativeLayout) findViewById(R.id.splash);
-//        animation = AnimationUtils.loadAnimation(getApplicationContext(),
-//                R.anim.bounce_animation);
-//splash.setAnimation(animation);
-//// Later.. stop the animation
+  private EditText mPhoneNumber;
+  private TextView mSmsButton;
+  private String mCountryIso;
+  private TextWatcher mNumberTextWatcher;
 
+  @Override
+  protected void onCreate(Bundle savedInstanceState) {
+    super.onCreate(savedInstanceState);
+
+    setContentView(R.layout.activity_main_new);
+    mPhoneNumber =  findViewById(R.id.phoneNumber);
+    mSmsButton =  findViewById(R.id.smsVerificationButton);
+
+    mCountryIso = PhoneNumberUtils.getDefaultCountryIso(this);
+    final String defaultCountryName = new Locale("", mCountryIso).getDisplayName();
+    final CountrySpinner spinner = (CountrySpinner) findViewById(R.id.spinner);
+    spinner.init(defaultCountryName);
+    spinner.addCountryIsoSelectedListener(new CountrySpinner.CountryIsoSelectedListener() {
+      @Override
+      public void onCountryIsoSelected(String selectedIso) {
+        if (selectedIso != null) {
+          mCountryIso = selectedIso;
+          resetNumberTextWatcher(mCountryIso);
+          // force update:
+          mNumberTextWatcher.afterTextChanged(mPhoneNumber.getText());
+        }
+      }
+    });
+    resetNumberTextWatcher(mCountryIso);
+
+    tryAndPrefillPhoneNumber();
+  }
+
+  private void tryAndPrefillPhoneNumber() {
+    if (checkCallingOrSelfPermission(Manifest.permission.READ_PHONE_STATE) == PackageManager.PERMISSION_GRANTED) {
+      TelephonyManager manager = (TelephonyManager) getSystemService(Context.TELEPHONY_SERVICE);
+      mPhoneNumber.setText(manager.getLine1Number());
+    } else {
+      ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.READ_PHONE_STATE}, 0);
     }
-    private void prepareMovieData() {
-        Movie movie = new Movie("Mad Max: Fury Road", "Action & Adventure", "2015");
-        movieList.add(movie);
+  }
 
-        movie = new Movie("Inside Out", "Animation, Kids & Family", "2015");
-        movieList.add(movie);
-
-        movie = new Movie("Star Wars: Episode VII - The Force Awakens", "Action", "2015");
-        movieList.add(movie);
-
-        movie = new Movie("Shaun the Sheep", "Animation", "2015");
-        movieList.add(movie);
-
-        movie = new Movie("The Martian", "Science Fiction & Fantasy", "2015");
-        movieList.add(movie);
-
-        movie = new Movie("Mission: Impossible Rogue Nation", "Action", "2015");
-        movieList.add(movie);
-
-        movie = new Movie("Up", "Animation", "2009");
-        movieList.add(movie);
-
-        movie = new Movie("Star Trek", "Science Fiction", "2009");
-        movieList.add(movie);
-
-        movie = new Movie("The LEGO Movie", "Animation", "2014");
-        movieList.add(movie);
-
-        movie = new Movie("Iron Man", "Action & Adventure", "2008");
-        movieList.add(movie);
-
-        movie = new Movie("Aliens", "Science Fiction", "1986");
-        movieList.add(movie);
-
-        movie = new Movie("Chicken Run", "Animation", "2000");
-        movieList.add(movie);
-
-        movie = new Movie("Back to the Future", "Science Fiction", "1985");
-        movieList.add(movie);
-
-        movie = new Movie("Raiders of the Lost Ark", "Action & Adventure", "1981");
-        movieList.add(movie);
-
-        movie = new Movie("Goldfinger", "Action & Adventure", "1965");
-        movieList.add(movie);
-
-        movie = new Movie("Guardians of the Galaxy", "Science Fiction & Fantasy", "2014");
-        movieList.add(movie);
-
-        mAdapter.notifyDataSetChanged();
+  public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+    if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+      tryAndPrefillPhoneNumber();
+    } else {
+      if (ActivityCompat.shouldShowRequestPermissionRationale(this, permissions[0])) {
+        Toast.makeText(this, "This application needs permission to read your phone number to automatically "
+            + "pre-fill it", Toast.LENGTH_LONG).show();
+      }
     }
+  }
+
+  private void openActivity(String phoneNumber) {
+    Intent verification = new Intent(this, VerificationActivity.class);
+    verification.putExtra(INTENT_PHONENUMBER, phoneNumber);
+    verification.putExtra(INTENT_COUNTRY_CODE, Iso2Phone.getPhone(mCountryIso));
+    startActivity(verification);
+  }
+
+  private void setButtonsEnabled(boolean enabled) {
+    mSmsButton.setEnabled(enabled);
+  }
+
+  public void onButtonClicked(View view) {
+    openActivity(getE164Number());
+  }
+
+  private void resetNumberTextWatcher(String countryIso) {
+
+    if (mNumberTextWatcher != null) {
+      mPhoneNumber.removeTextChangedListener(mNumberTextWatcher);
+    }
+
+    mNumberTextWatcher = new PhoneNumberFormattingTextWatcher(countryIso) {
+      @Override
+      public void onTextChanged(CharSequence s, int start, int before, int count) {
+        super.onTextChanged(s, start, before, count);
+      }
+
+      @Override
+      public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+        super.beforeTextChanged(s, start, count, after);
+      }
+
+      @Override
+      public synchronized void afterTextChanged(Editable s) {
+        super.afterTextChanged(s);
+        if (isPossiblePhoneNumber()) {
+          setButtonsEnabled(true);
+          mPhoneNumber.setTextColor(Color.WHITE);
+        } else {
+          setButtonsEnabled(false);
+          mPhoneNumber.setTextColor(Color.RED);
+        }
+      }
+    };
+
+    mPhoneNumber.addTextChangedListener(mNumberTextWatcher);
+  }
+
+  private boolean isPossiblePhoneNumber() {
+    return PhoneNumberUtils.isPossibleNumber(mPhoneNumber.getText().toString(), mCountryIso);
+  }
+
+  private String getE164Number() {
+    return mPhoneNumber.getText().toString().replaceAll("\\D", "").trim();
+    // return PhoneNumberUtils.formatNumberToE164(mPhoneNumber.getText().toString(), mCountryIso);
+  }
 }
